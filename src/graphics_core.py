@@ -1,5 +1,5 @@
 import pygame
-from skai.geometry import Point, Segment
+from src.geometry import Point, Segment
 
 
 def draw_point(screen, color, point: Point, radius=4):

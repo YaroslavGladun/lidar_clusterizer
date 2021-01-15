@@ -1,7 +1,7 @@
 import pygame
-from skai.geometry import Segment, Point
-from skai.graphics_core import draw_segment, draw_point
-import skai.simulation as sim
+from src.geometry import Segment, Point
+from src.graphics_core import draw_segment, draw_point
+import src.simulation as sim
 
 pygame.init()
 

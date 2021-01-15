@@ -2,8 +2,8 @@ import pygame
 import numpy as np
 from pygame import Surface
 from typing import Tuple
-from skai.geometry import Point, Segment
-from skai.graphics_core import draw_point, draw_segment
+from src.geometry import Point, Segment
+from src.graphics_core import draw_point, draw_segment
 
 
 class Robot:
