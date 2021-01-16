@@ -27,6 +27,9 @@ class Point(ICopy):
     def __add__(self, other):
         return Point(*(self.__values + other.__values))
 
+    def __mul__(self, other):
+        return Point(*(self.__values * other))
+
     def __del__(self):
         del self.__values
 

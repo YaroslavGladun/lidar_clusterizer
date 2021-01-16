@@ -32,6 +32,7 @@ class Controller:
         self.robot = robot
         self.surface = surface
         self.action = Action.NONE
+        self.lidar_points = []
 
 
 class Simulator:
