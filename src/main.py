@@ -1,7 +1,6 @@
 import pygame
-from src.geometry import Segment, Point
-from src.graphics_core import draw_segment, draw_point
-import src.simulation as sim
+import src.controller as W
+import src.plugins as P
 
 pygame.init()
 
@@ -19,12 +18,13 @@ pygame.display.set_caption("lidar clusterize")
 done = False
 clock = pygame.time.Clock()
 
-world = sim.World(sim.Room(), sim.Robot(500, 250), screen)
-simulator = sim.Simulator(world, (
-    sim.RobotDrawer(),
-    sim.RobotMover(),
-    sim.MapBuilder(),
-    sim.MapDrawer()
+world = W.Controller(W.Room(), W.Robot(500, 250), screen)
+simulator = W.Simulator(world, (
+    P.RobotDrawer(),
+    P.RobotMover(),
+    P.MapBuilder(),
+    P.MapDrawer(),
+    # P.LidarSimulator()
 ))
 
 while not done:
@@ -38,6 +38,6 @@ while not done:
 
     pygame.display.flip()
 
-    clock.tick(60)
+    clock.tick(30)
 
 pygame.quit()
