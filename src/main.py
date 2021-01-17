@@ -1,6 +1,7 @@
 import pygame
 import src.controller as W
 import src.plugins as P
+pygame.font.init()
 
 pygame.init()
 
@@ -15,13 +16,15 @@ pygame.display.set_caption("Lidar clusterize")
 clock = pygame.time.Clock()
 
 world = W.Controller(W.Room(), W.Robot(500, 250), screen)
-simulator = W.Simulator(world, (
+processor = W.Processor(world, (
     P.RobotDrawer(),
     P.RobotMover(),
     P.MapBuilder(),
     P.MapDrawer(),
     P.LidarSimulator(rays_num=72, std=3),
-    P.LidarDataDrawer()
+    P.LidarDataDrawer(radius=3),
+    P.Menu(x=10, y=10, w=100, h=200, menu_state=world.menu_state),
+    P.Clusterizer()
 ))
 
 done = False
@@ -30,7 +33,7 @@ while not done:
         if event.type == pygame.QUIT:
             done = True
     screen.fill(WHITE)
-    simulator.process()
+    processor.process()
     pygame.display.flip()
-    clock.tick(30)
+    clock.tick(60)
 pygame.quit()

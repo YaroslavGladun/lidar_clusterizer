@@ -2,6 +2,7 @@ import src.geometry as gm
 from pygame import Surface
 from typing import Tuple
 from enum import Enum
+from src.menu import MenuState
 
 
 class Robot:
@@ -33,9 +34,10 @@ class Controller:
         self.surface = surface
         self.action = Action.NONE
         self.lidar_points = []
+        self.menu_state = MenuState()
 
 
-class Simulator:
+class Processor:
 
     def __init__(self, world: Controller, plugins: Tuple):
         self.plugins = plugins

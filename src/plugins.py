@@ -2,10 +2,12 @@ import pygame
 import src.controller as C
 import src.geometry as gm
 import numpy as np
-from src.graphics_core import draw_segment, draw_point
+import src.graphics_core as gc
 from src.colfig import get_config
 from src.utils import color_str_to_list
 from abc import ABC, abstractmethod
+from src.menu import MenuState, ClusteringMethod
+from sklearn.cluster import KMeans, DBSCAN
 
 COLORS = get_config('../config/colors.yaml')
 for key in COLORS:
@@ -113,8 +115,8 @@ class MapBuilder(PluginBase):
             mouse_pos = pygame.mouse.get_pos()
             self.segment.b.x = mouse_pos[0]
             self.segment.b.y = mouse_pos[1]
-            draw_segment(controller.surface, COLORS['color3'], self.segment, width=3)
-        else:
+            gc.draw_segment(controller.surface, COLORS['color3'], self.segment, width=3)
+        elif self.is_holding:
             controller.action = C.Action.NONE
             controller.room.append_segment(self.segment.copy())
             self.segment.a.x = self.segment.b.x = 0
@@ -129,7 +131,7 @@ class MapDrawer(PluginBase):
 
     def process(self, controller: C.Controller):
         for segment in controller.room.polygon.segments:
-            draw_segment(controller.surface, COLORS['color2'], segment, width=3)
+            gc.draw_segment(controller.surface, COLORS['color1'], segment, width=3)
 
 
 class LidarSimulator(PluginBase):
@@ -139,7 +141,7 @@ class LidarSimulator(PluginBase):
         self.rays_num = rays_num
         self.iter_seg = gm.Segment(gm.Point(0, 0), gm.Point(0, 0))
 
-    @ProcessReduce(15)
+    @ProcessReduce(60)
     def process(self, controller: C.Controller):
         self.iter_seg.a = controller.robot.position
         controller.lidar_points.clear()
@@ -156,9 +158,79 @@ class LidarSimulator(PluginBase):
 
 class LidarDataDrawer(PluginBase):
 
-    def __init__(self):
-        pass
+    def __init__(self, radius=3):
+        self.radius = radius
 
     def process(self, controller: C.Controller):
         for point in controller.lidar_points:
-            draw_point(controller.surface, COLORS['color1'], point)
+            gc.draw_point(controller.surface, COLORS['color2'], point, radius=self.radius)
+
+
+class Menu(PluginBase):
+
+    def __init__(self, x, y, w, h, menu_state):
+        self.h = h
+        self.w = w
+        self.y = y
+        self.x = x
+        self.menu_state = menu_state
+        self.none_button = gc.Button(x + 10, y + 10, x + w - 20, 20, "None",
+                                     on_click=lambda: self.menu_state.set_clustering_method(ClusteringMethod.NONE))
+        self.k_means_button = gc.Button(x + 10, y + 40, x + w - 20, 20, "K-Means",
+                                        on_click=lambda: self.menu_state.set_clustering_method(
+                                            ClusteringMethod.K_MEANS))
+        self.dbscan_button = gc.Button(x + 10, y + 70, x + w - 20, 20, "DBSCAN",
+                                       on_click=lambda: self.menu_state.set_clustering_method(ClusteringMethod.DBSCAN))
+
+    def process(self, controller: C.Controller):
+
+        self.none_button.disable()
+        self.dbscan_button.disable()
+        self.k_means_button.disable()
+        if controller.menu_state.clustering_method == ClusteringMethod.NONE:
+            self.none_button.enable()
+        elif controller.menu_state.clustering_method == ClusteringMethod.K_MEANS:
+            self.k_means_button.enable()
+        elif controller.menu_state.clustering_method == ClusteringMethod.DBSCAN:
+            self.dbscan_button.enable()
+
+        pygame.draw.rect(controller.surface, COLORS['color5'],
+                         pygame.Rect((self.x, self.y), (self.x + self.w, self.y + self.h)))
+        self.none_button.process(controller.surface)
+        self.k_means_button.process(controller.surface)
+        self.dbscan_button.process(controller.surface)
+
+
+class Clusterizer(PluginBase):
+
+    def __init__(self):
+        self.k_means = KMeans(n_clusters=6)
+        self.dbscan = DBSCAN(eps=100)
+        self.colors = [
+            [255, 0, 0],
+            [0, 255, 0],
+            [0, 0, 255],
+            [255, 255, 0],
+            [255, 0, 255],
+            [0, 255, 255]
+        ]
+        self.labels = []
+
+    @ProcessReduce(60)
+    def clusterize(self, controller: C.Controller):
+        if not len(controller.lidar_points) or not controller.menu_state.clustering_method:
+            return
+        X = np.array(list(map(lambda x: x.values, controller.lidar_points)))
+        if controller.menu_state.clustering_method == ClusteringMethod.K_MEANS:
+            self.labels = self.k_means.fit(X).labels_
+        elif controller.menu_state.clustering_method == ClusteringMethod.DBSCAN:
+            self.labels = self.dbscan.fit(X).labels_
+
+    def process(self, controller: C.Controller):
+        self.clusterize(controller)
+        if not len(controller.lidar_points):
+            return
+        for i in range(len(self.labels)):
+            gc.draw_point(controller.surface, self.colors[self.labels[i] % len(self.colors)],
+                          controller.lidar_points[i])
+        # print(X)
