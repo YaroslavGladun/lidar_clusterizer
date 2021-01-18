@@ -6,8 +6,9 @@ import src.graphics_core as gc
 from src.colfig import get_config
 from src.utils import color_str_to_list
 from abc import ABC, abstractmethod
-from src.menu import MenuState, ClusteringMethod
-from sklearn.cluster import KMeans, DBSCAN
+from src.menu import ClusteringMethod
+from sklearn.cluster import KMeans, DBSCAN, OPTICS
+from sklearn.mixture import GaussianMixture
 
 COLORS = get_config('../config/colors.yaml')
 for key in COLORS:
@@ -141,7 +142,7 @@ class LidarSimulator(PluginBase):
         self.rays_num = rays_num
         self.iter_seg = gm.Segment(gm.Point(0, 0), gm.Point(0, 0))
 
-    @ProcessReduce(60)
+    @ProcessReduce(30)
     def process(self, controller: C.Controller):
         self.iter_seg.a = controller.robot.position
         controller.lidar_points.clear()
@@ -182,30 +183,47 @@ class Menu(PluginBase):
         self.dbscan_button = gc.Button(x + 10, y + 70, x + w - 20, 20, "DBSCAN",
                                        on_click=lambda: self.menu_state.set_clustering_method(ClusteringMethod.DBSCAN))
 
+        self.optics_button = gc.Button(x + 10, y + 100, x + w - 20, 20, "OPTICS",
+                                       on_click=lambda: self.menu_state.set_clustering_method(ClusteringMethod.OPTICS))
+
+        self.gaussian_mixture_button = gc.Button(x + 10, y + 130, x + w - 20, 20, "Gaussian mixture",
+                                                 on_click=lambda: self.menu_state.set_clustering_method(
+                                                     ClusteringMethod.GAUSSIAN_MIXTURE))
+
     def process(self, controller: C.Controller):
 
         self.none_button.disable()
         self.dbscan_button.disable()
         self.k_means_button.disable()
+        self.optics_button.disable()
+        self.gaussian_mixture_button.disable()
         if controller.menu_state.clustering_method == ClusteringMethod.NONE:
             self.none_button.enable()
         elif controller.menu_state.clustering_method == ClusteringMethod.K_MEANS:
             self.k_means_button.enable()
         elif controller.menu_state.clustering_method == ClusteringMethod.DBSCAN:
             self.dbscan_button.enable()
+        elif controller.menu_state.clustering_method == ClusteringMethod.OPTICS:
+            self.optics_button.enable()
+        elif controller.menu_state.clustering_method == ClusteringMethod.GAUSSIAN_MIXTURE:
+            self.gaussian_mixture_button.enable()
 
         pygame.draw.rect(controller.surface, COLORS['color5'],
                          pygame.Rect((self.x, self.y), (self.x + self.w, self.y + self.h)))
         self.none_button.process(controller.surface)
         self.k_means_button.process(controller.surface)
         self.dbscan_button.process(controller.surface)
+        self.optics_button.process(controller.surface)
+        self.gaussian_mixture_button.process(controller.surface)
 
 
 class Clusterizer(PluginBase):
 
     def __init__(self):
         self.k_means = KMeans(n_clusters=6)
-        self.dbscan = DBSCAN(eps=100)
+        self.dbscan = DBSCAN(eps=50)
+        self.optics = OPTICS()
+        self.gaussian_mixture = GaussianMixture(n_components=6)
         self.colors = [
             [255, 0, 0],
             [0, 255, 0],
@@ -216,15 +234,37 @@ class Clusterizer(PluginBase):
         ]
         self.labels = []
 
-    @ProcessReduce(60)
+    @ProcessReduce(30)
     def clusterize(self, controller: C.Controller):
-        if not len(controller.lidar_points) or not controller.menu_state.clustering_method:
+        if not len(controller.lidar_points):
             return
         X = np.array(list(map(lambda x: x.values, controller.lidar_points)))
         if controller.menu_state.clustering_method == ClusteringMethod.K_MEANS:
-            self.labels = self.k_means.fit(X).labels_
+            labels = self.k_means.fit(X).labels_
+            label_values = []
+            for t in labels:
+                if t not in label_values:
+                    label_values.append(t)
+            labels_new = np.zeros_like(labels)
+            for i, label_value in enumerate(label_values):
+                labels_new[labels == label_value] = i
+            self.labels = labels_new
         elif controller.menu_state.clustering_method == ClusteringMethod.DBSCAN:
             self.labels = self.dbscan.fit(X).labels_
+        elif controller.menu_state.clustering_method == ClusteringMethod.OPTICS:
+            self.labels = self.optics.fit(X).labels_
+        elif controller.menu_state.clustering_method == ClusteringMethod.GAUSSIAN_MIXTURE:
+            labels = self.gaussian_mixture.fit_predict(X)
+            label_values = []
+            for t in labels:
+                if t not in label_values:
+                    label_values.append(t)
+            labels_new = np.zeros_like(labels)
+            for i, label_value in enumerate(label_values):
+                labels_new[labels == label_value] = i
+            self.labels = labels_new
+        else:
+            self.labels = []
 
     def process(self, controller: C.Controller):
         self.clusterize(controller)
@@ -233,4 +273,3 @@ class Clusterizer(PluginBase):
         for i in range(len(self.labels)):
             gc.draw_point(controller.surface, self.colors[self.labels[i] % len(self.colors)],
                           controller.lidar_points[i])
-        # print(X)

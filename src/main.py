@@ -21,9 +21,9 @@ processor = W.Processor(world, (
     P.RobotMover(),
     P.MapBuilder(),
     P.MapDrawer(),
-    P.LidarSimulator(rays_num=72, std=3),
+    P.LidarSimulator(rays_num=180, std=3),
     P.LidarDataDrawer(radius=3),
-    P.Menu(x=10, y=10, w=100, h=200, menu_state=world.menu_state),
+    P.Menu(x=10, y=10, w=110, h=200, menu_state=world.menu_state),
     P.Clusterizer()
 ))
 

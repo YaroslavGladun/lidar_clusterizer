@@ -1,5 +1,8 @@
-1. install python3.7
-2. go into project folder using terminal
-3. python3.7 -m venv env
-4. . env/bin/activate
-5. 
+# 1. install python3.7
+# 2. go into project folder using terminal
+# 3. enter following commands
+python3.7 -m venv env
+. env/bin/activate
+pip install pygame numpy pandas pyyaml scikit-learn
+
+# 5. open "main.py" in pycharm and press run button

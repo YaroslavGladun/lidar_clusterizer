@@ -11,7 +11,7 @@ for key in COLORS:
     COLORS[key] = color_str_to_list(COLORS[key])
 
 
-def draw_point(screen, color, point: Point, radius=4, *args, **kwargs):
+def draw_point(screen, color, point: Point, radius=3, *args, **kwargs):
     pygame.draw.circle(screen, color, point.values, radius, *args, **kwargs)
 
 

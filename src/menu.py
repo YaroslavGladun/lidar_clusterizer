@@ -5,6 +5,8 @@ class ClusteringMethod(enum.Enum):
     NONE = 0
     K_MEANS = 1
     DBSCAN = 2
+    OPTICS = 3
+    GAUSSIAN_MIXTURE = 4
 
 
 class MenuState:
